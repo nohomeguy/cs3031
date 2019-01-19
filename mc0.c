@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <string.h>
 
 #define TRUE 1
 
@@ -116,29 +117,52 @@ int main(int argc, char *argv[]){
 		char *opt = (char*) malloc (sizeof(char*));
 		char *a = (char*) malloc (sizeof(char*));
 		char *p = (char*) malloc (sizeof(char*));
-		scanf("%s", opt);
-		switch(atoi(opt)){
-			case 0:
-				printf("\n-- Who Am I? --\n");
-				exec_func1("whoami");
-				printf("\n");
-				break;
-			case 1:
-				printf("\n-- Last Logins --\n");
-				exec_func1("last");
-				printf("\n");
-				break;
-			case 2:
-				printf("\n-- Directory Listing --\nArguments?: ");
-				scanf("%s", a);
-				printf("Path:? ");
-				scanf("%s", p);
-				char *args[] = {a, p};
-				exec_func2("ls", args, 2);
-				printf("\n");
-				break;
-			default:
-				printf("Option don't exist\n");
+		size_t opt_size;
+		int gline_result = getline(&opt, &opt_size, stdin);
+//		printf("%s", opt);
+		if(gline_result == -1){free(opt); free(a); free(p);break;}
+		if(strcmp(opt, "0\n") != 0 && strcmp(opt, "1\n") != 0 && strcmp(opt, "2\n") != 0){
+			printf("\nOption don't exist\n\n");
+		} else {
+			switch(atoi(opt)){
+				case 0:
+					printf("\n-- Who Am I? --\n");
+					exec_func1("whoami");
+					printf("\n");
+					break;
+				case 1:
+					printf("\n-- Last Logins --\n");
+					exec_func1("last");
+					printf("\n");
+					break;
+				case 2:
+					printf("\n-- Directory Listing --\nArguments?: ");
+					getline(&a, &opt_size, stdin);
+					if (strcmp(a, "\n") == 0){
+						strcpy(a, NULL);
+					} else {
+						char *to = (char*) malloc (sizeof(char*));
+						strncpy(to, a, opt_size-2);
+						strcpy(a, to);
+						free(to);
+					}
+					printf("Path:? ");
+					getline(&p, &opt_size, stdin);
+					if (strcmp(p, "\n") == 0){
+						strcpy(p, NULL);
+					} else {
+						char *to = (char*) malloc (sizeof(char*));
+						strncpy(to, p, opt_size-2);
+						strcpy(p, to);
+						free(to);
+					}
+					char *args[] = {a, p};
+					exec_func2("ls", args, 2);
+					printf("\n");
+					break;
+				default:
+					printf("Option don't exist\n");
+			}
 		}
 		free(opt); free(a); free(p);
 	}
