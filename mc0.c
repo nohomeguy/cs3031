@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <string.h>
 
 #define TRUE 1
 
@@ -79,13 +80,40 @@ int exec_func1(char *command){
 }
 
 /**
+ *	remove all the null elements in a string array
+ *	@param char *args[]: string array to be removed
+ *	@param int arg_num: number of elements in args[]
+ *	@return return number of remaining strings 
+**/
+int remove_null_arg(char *args[], int arg_num, char *r_args[]){
+	int i, r_flag = 0; 		// loop counter and the index flag for the result array
+	int null_count = 0;	// null counter for the original array
+	for (i = 0; i < arg_num; i ++){
+		if (strcmp(args[i], "") == 0){
+			null_count ++;
+		} else {
+			strcpy (r_args[r_flag], args[i]);
+printf("%s", r_args[r_flag]);
+			r_flag ++;
+		}
+	}
+	return arg_num - null_count;	
+}
+
+/**
  *	execute a command passed in by a string, pass the arguments in an array
  *	@param char* command: the name of the command to be execute
  *	@param char* args[]: the arguments for the command
  *	@param int arg_num: number of arguments
  *	@return: 0 if no error, non-zero if error
 **/
-int exec_func2(char *command, char *args[], int arg_num){
+int exec_func2(char *command, char *o_args[], int o_arg_num){
+	int i;			// index for loop
+	char **args = (char**) malloc (16*256);
+	for (i = 0; i < 16; i ++){
+		args[i] = (char*) malloc(256);
+	}
+	int arg_num = remove_null_arg(o_args, o_arg_num, args);
 	struct rusage pre_stats;
 	struct rusage post_stats;
 	struct timeval start;
@@ -94,7 +122,6 @@ int exec_func2(char *command, char *args[], int arg_num){
 	getrusage(RUSAGE_CHILDREN, &pre_stats);
 	gettimeofday(&start, NULL);	
 	char* argv[arg_num + 2];// store the arguments to execute the command
-	int i;			// index for loop
 	
 	argv[0] = command;
 	for (i = 0; i < arg_num; i++){
@@ -106,6 +133,7 @@ int exec_func2(char *command, char *args[], int arg_num){
 	getrusage(RUSAGE_CHILDREN, &post_stats);
 	gettimeofday(&end, NULL);
 	print_stats(pre_stats, post_stats, start, end);
+	free(args);
 	return 0;
 }
 
@@ -113,32 +141,44 @@ int exec_func2(char *command, char *args[], int arg_num){
 int main(int argc, char *argv[]){
 	while(TRUE){
 		screen();
-		char *opt = (char*) malloc (sizeof(char*));
-		char *a = (char*) malloc (sizeof(char*));
-		char *p = (char*) malloc (sizeof(char*));
-		scanf("%s", opt);
-		switch(atoi(opt)){
-			case 0:
-				printf("\n-- Who Am I? --\n");
-				exec_func1("whoami");
-				printf("\n");
-				break;
-			case 1:
-				printf("\n-- Last Logins --\n");
-				exec_func1("last");
-				printf("\n");
-				break;
-			case 2:
-				printf("\n-- Directory Listing --\nArguments?: ");
-				scanf("%s", a);
-				printf("Path:? ");
-				scanf("%s", p);
-				char *args[] = {a, p};
-				exec_func2("ls", args, 2);
-				printf("\n");
-				break;
-			default:
-				printf("Option don't exist\n");
+		char *opt = (char*) malloc (256);
+//		printf("sizeof char* = %d", sizeof(char*));
+		char *a = (char*) malloc (256);
+		char *p = (char*) malloc (256);
+		size_t opt_size = 256;
+		ssize_t nread = 0;
+		char* gline_result = fgets(opt, 256, stdin);
+//		printf("optsize = %d", (int) opt_size);
+//		printf("%s", opt);
+		if(gline_result == NULL){pause();}
+		if(strcmp(opt, "0\n") != 0 && strcmp(opt, "1\n") != 0 && strcmp(opt, "2\n") != 0){
+			printf("\nOption don't exist\n\n");
+		} else {
+			switch(atoi(opt)){
+				case 0:
+					printf("\n-- Who Am I? --\n");
+					exec_func1("whoami");
+					printf("\n");
+					break;
+				case 1:
+					printf("\n-- Last Logins --\n");
+					exec_func1("last");
+					printf("\n");
+					break;
+				case 2:
+					printf("\n-- Directory Listing --\nArguments?: ");
+					nread = getline(&a, &opt_size, stdin);
+					a[(int)nread-1] = 0;
+					printf("Path:? ");
+					nread = getline(&p, &opt_size, stdin);
+					p[(int)nread-1] = 0;
+					char *args[] = {a, p};
+					exec_func2("ls", args, 2);
+					printf("\n");
+					break;
+				default:
+					printf("Option don't exist\n");
+			}
 		}
 		free(opt); free(a); free(p);
 	}
